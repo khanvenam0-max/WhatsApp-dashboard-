@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Web Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #e5ddd5; margin: 0; }
+        .nav { background: #075e54; color: white; padding: 10px 20px; text-align: center; }
+        #qr-container { text-align: center; margin-top: 50px; }
+        #qr-img { width: 250px; border: 5px solid #fff; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        #chat-dashboard { display: none; max-width: 900px; margin: 20px auto; background: #fff; height: 80vh; border-radius: 8px; flex-direction: column; overflow: hidden; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; background: #f0f2f5; display: flex; flex-direction: column; gap: 10px; }
+        
+        .msg { padding: 10px 15px; border-radius: 8px; max-width: 70%; font-size: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .rec { background: #fff; align-self: flex-start; }
+        .sen { background: #dcf8c6; align-self: flex-end; }
+
+        .input-bar { padding: 15px; display: flex; background: #f0f0f0; gap: 10px; border-top: 1px solid #ddd; }
+        input, textarea { border: 1px solid #ccc; padding: 10px; border-radius: 5px; outline: none; }
+        #num { width: 150px; }
+        #txt { flex: 1; }
+        button { background: #25d366; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="nav"><h1>Control Center</h1></div>
+
+    <div id="qr-container">
+        <img id="qr-img" src="" alt="Scan QR Code">
+        <p id="status">Connecting to WhatsApp... Please wait for QR.</p>
+    </div>
+
+    <div id="chat-dashboard">
+        <div id="messages"></div>
+        <div class="input-area">
+            <div class="input-bar">
+                <input type="text" id="num" placeholder="919876543210">
+                <textarea id="txt" placeholder="Type a message..."></textarea>
+                <button onclick="send()">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const qrImg = document.getElementById('qr-img');
+        const status = document.getElementById('status');
+        const dashboard = document.getElementById('chat-dashboard');
+        const msgList = document.getElementById('messages');
+
+        socket.on('qr', (url) => {
+            qrImg.src = url;
+            status.innerText = "Scan this QR with your WhatsApp Linked Devices";
+        });
+
+        socket.on('ready', () => {
+            document.getElementById('qr-container').style.display = 'none';
+            dashboard.style.display = 'flex';
+        });
+
+        socket.on('message_received', (data) => {
+            const div = document.createElement('div');
+            div.className = 'msg rec';
+            div.innerHTML = `<strong>${data.from}</strong><br>${data.body}`;
+            msgList.appendChild(div);
+            msgList.scrollTop = msgList.scrollHeight;
+        });
+
+        function send() {
+            const number = document.getElementById('num').value;
+            const message = document.getElementById('txt').value;
+            if(!number || !message) return alert("Fill all details!");
+
+            socket.emit('send_message', { number, message });
+
+            const div = document.createElement('div');
+            div.className = 'msg sen';
+            div.innerHTML = message;
+            msgList.appendChild(div);
+            document.getElementById('txt').value = '';
+            msgList.scrollTop = msgList.scrollHeight;
+        }
+    </script>
+</body>
+</html>
